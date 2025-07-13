@@ -73,7 +73,7 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         context.user_data["awaiting_translation"] = False
 
-    if ("привет" or "здравствуй" or "добрый день") in text:
+    if any(word in text for word in ["привет", "здравствуй", "добрый день"]):
         await update.message.reply_text("Привет! Выбери команду:", reply_markup=keyboard)
 
     elif text == "словарь":
