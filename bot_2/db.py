@@ -1,6 +1,8 @@
 import asyncio
 import aiomysql
 
+from datetime import datetime, timedelta
+
 from config import host, port, user, password, database
 
 # глобальная переменная, в которой хранится единственный пул соединений
@@ -68,6 +70,25 @@ async def get_5_last_record_for_user(name):
     async with pool.acquire() as conn:
         async with conn.cursor() as cur:
             await cur.execute(sql)
+            rows = await cur.fetchall()
+    lines = []
+    for i, (rid, url, tags, created_at) in enumerate(rows, start=1):
+        tags_display = tags if tags and tags.strip() else "(без тегов)"
+        lines.append(f"{i}) {tags_display}\n   {url}\n   {created_at}")
+
+    return "\n\n".join(lines)
+
+
+async def get_5_last_min_for_user(name):
+    '''
+    Получить записи за последние 5 минут
+    '''
+    limit = datetime.now()-timedelta(minutes=5)
+    sql = f"SELECT id, url, tags, created_at FROM {name} WHERE created_at >= %s;"
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(sql, (limit,))
             rows = await cur.fetchall()
     lines = []
     for i, (rid, url, tags, created_at) in enumerate(rows, start=1):

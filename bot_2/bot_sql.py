@@ -1,12 +1,19 @@
-from telegram import Update, ReplyKeyboardMarkup
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 import aiohttp
 from config import BOT_TOKEN
-from db import get_pool, close_pool, create_table_for_user, add_record_for_user, get_5_last_record_for_user, get_url_by_id
+from db import get_pool, close_pool, create_table_for_user, add_record_for_user, get_5_last_record_for_user, get_url_by_id, get_5_last_min_for_user
 
 # Клавиатура
 keyboard = ReplyKeyboardMarkup(
-    [["Дай кота"], ["История"], ["Поиск по тегу"], ["Поиск id записи"], ["Справка"]],
+    keyboard=[
+        [KeyboardButton("Дай кота")],
+        [KeyboardButton("История (last 5 record)"),
+         KeyboardButton("История (last 5 min)")],
+        [KeyboardButton("Поиск по тегу"),
+         KeyboardButton("Поиск по id записи")],
+        [KeyboardButton("Справка")],
+    ],
     resize_keyboard=True,
     is_persistent=True,
 )
@@ -102,18 +109,22 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session_state.url = cat_url
         session_state.awaiting_tags = True
 
-    elif text == "история":
-        await update.message.reply_text(await get_5_last_record_for_user(get_info_user(update)), reply_markup=keyboard)
+    elif text == "история (last 5 record)":
+        await update.message.reply_text(await get_5_last_record_for_user(get_info_user(update)), reply_markup=keyboard, disable_web_page_preview=True)
 
-    elif text == "поиск id записи":
+    elif text == "история (last 5 min)":
+        await update.message.reply_text(await get_5_last_min_for_user(get_info_user(update)), reply_markup=keyboard, disable_web_page_preview=True)
+
+    elif text == "поиск по id записи":
         await update.message.reply_text("Введите id записи для получения картинки:")
         session_state.awaiting_id = True
 
     elif text == "справка":
-        await update.message.reply_text("Нажмите на кнопку [Дай кота], если хотите получить фото котика. \nПосле того как посмотрите картинку бот будет ждать ввод тегов\n\n"
-                                        "Если хотите посмотреть историю своих запросов нажмите [История]\n\n"
-                                        "Чтобы воспользоваться поиском нажмите [Поиск по тегу]\n"
-                                        "После нажатия [Поиск по тегу] бот будет ждать ввода слова для поиска\n\n"
+        await update.message.reply_text("Нажмите на кнопку [Дай кота], если хотите получить фото котика. \nПосле того как посмотрите картинку бот будет ждать ввод тегов.\n\n"
+                                        "Если хотите посмотреть историю своих запросов нажмите одну из кнопок [История].\n\n"
+                                        "Чтобы воспользоваться поиском нажмите [Поиск по тегу] или [Поиск по id записи].\n"
+                                        "После нажатия [Поиск по тегу] бот будет ждать ввода слова для поиска.\n\n"
+                                        "После нажатия [Поиск по id записи] бот будет ждать ввода номера id для поиска.\n\n"
                                         "Создатель бота: Татьяна Панцырева")
     else:
         await update.message.reply_text("Выберите действие на клавиатуре ↓", reply_markup=keyboard)
