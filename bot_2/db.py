@@ -109,3 +109,21 @@ async def get_url_by_id(name, record_id):
             await cur.execute(sql, (record_id,))
             row = await cur.fetchone()
     return row[0]
+
+
+async def get_records_by_tags(name, seach_tag):
+    '''
+    Получить записи по тегу
+    '''
+    sql = f'''SELECT id, url, tags, created_at FROM {name} WHERE tags LIKE %s;'''
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(sql, (f"%{seach_tag}%",))
+            rows = await cur.fetchall()
+    lines = []
+    for i, (rid, url, tags, created_at) in enumerate(rows, start=1):
+        tags_display = tags if tags and tags.strip() else "(без тегов)"
+        lines.append(f"{i}) {tags_display}\n   {url}\n   {created_at}")
+
+    return "\n\n".join(lines)

@@ -2,7 +2,7 @@ from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 import aiohttp
 from config import BOT_TOKEN
-from db import get_pool, close_pool, create_table_for_user, add_record_for_user, get_5_last_record_for_user, get_url_by_id, get_5_last_min_for_user
+from db import get_pool, close_pool, create_table_for_user, add_record_for_user, get_5_last_record_for_user, get_url_by_id, get_5_last_min_for_user, get_records_by_tags
 
 # Клавиатура
 keyboard = ReplyKeyboardMarkup(
@@ -24,10 +24,11 @@ class UserSession:
     состояние диалога конкретного пользователя
     '''
 
-    def __init__(self, url: str | None = None, awaiting_tags: bool = False, awaiting_id: bool = False):
+    def __init__(self, url: str | None = None, awaiting_tags: bool = False, awaiting_id: bool = False, awaiting_seach: bool = False,):
         self.url = url
         self.awaiting_tags = awaiting_tags
         self.awaiting_id = awaiting_id
+        self.awaiting_seach = awaiting_seach
 
 
 def get_user_session(context: ContextTypes.DEFAULT_TYPE) -> UserSession:
@@ -102,6 +103,13 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_photo(photo=my_url)
         return
 
+    elif session_state.awaiting_seach:
+        session_state.awaiting_seach = False
+        seach_tag = await get_answer(update, context)
+        my_seach = await get_records_by_tags(get_info_user(update), seach_tag)
+        await update.message.reply_text(my_seach, reply_markup=keyboard, disable_web_page_preview=True)
+        return
+
     if text == "дай кота":
         cat_url = await get_cat_image_url(context)
         await update.message.reply_photo(photo=cat_url)
@@ -118,6 +126,10 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "поиск по id записи":
         await update.message.reply_text("Введите id записи для получения картинки:")
         session_state.awaiting_id = True
+
+    elif text == "поиск по тегу":
+        await update.message.reply_text("Введите слово для поиска записей:")
+        session_state.awaiting_seach = True
 
     elif text == "справка":
         await update.message.reply_text("Нажмите на кнопку [Дай кота], если хотите получить фото котика. \nПосле того как посмотрите картинку бот будет ждать ввод тегов.\n\n"
